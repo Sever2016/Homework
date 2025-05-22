@@ -54,6 +54,10 @@ public class Faculty {
         this.color = color;
     }
 
+    public void setStudents(List<Student> students) {
+        this.students = students;
+    }
+
     @Override
     public int hashCode() {
         return name.hashCode();
