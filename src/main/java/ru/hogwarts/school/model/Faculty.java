@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Entity
 public class Faculty {
@@ -26,8 +27,8 @@ public class Faculty {
         this.color = color;
     }
 
-    public long getId() {
-        return id;
+    public Optional<Long> getId() {
+        return Optional.ofNullable(id);
     }
 
     public String getName() {

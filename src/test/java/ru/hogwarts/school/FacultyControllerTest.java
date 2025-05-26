@@ -1,15 +1,17 @@
 package ru.hogwarts.school;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpMethod;
 import ru.hogwarts.school.controller.FacultyController;
 import ru.hogwarts.school.model.Faculty;
 import ru.hogwarts.school.model.Student;
+import ru.hogwarts.school.repository.FacultyRepository;
+import ru.hogwarts.school.repository.StudentRepository;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class FacultyControllerTest {
@@ -23,23 +25,44 @@ public class FacultyControllerTest {
     @Autowired
     private TestRestTemplate testRestTemplate;
 
+    @Autowired
+    private FacultyRepository facultyRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    private Faculty faculty1 = new Faculty();
+    private Faculty faculty2 = new Faculty();
+    private Faculty faculty3 = new Faculty();
+
+    @BeforeEach
+    void clear() {
+        studentRepository.deleteAll();
+        facultyRepository.deleteAll();
+        faculty1.setName("Синицы");
+        faculty1.setColor("Синий");
+        faculty2.setName("Синяки");
+        faculty2.setColor("Синий");
+        faculty3.setName("Абрикосцы");
+        faculty3.setColor("Жёлтый");
+        facultyRepository.save(faculty1);
+        facultyRepository.save(faculty2);
+        facultyRepository.save(faculty3);
+    }
+
     @Test
     void gettingFacultyById() throws Exception {
-        Faculty faculty = new Faculty();
-        faculty.setName("Абрикосцы");
-        faculty.setColor("Жёлтый");
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/6", Faculty.class))
+                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/" + faculty1.getId().get(), Faculty.class))
                 .isNotNull()
-                .isEqualTo(faculty);
+                .isEqualTo(faculty1);
     }
 
     @Test
     void creatingFaculty() throws Exception {
         Faculty faculty = new Faculty();
-        faculty.setName("Синицы");
-        faculty.setId(3L);
-        faculty.setColor("Синий");
+        faculty.setName("Травники");
+        faculty.setColor("Зелёный");
         Assertions
                 .assertThat(this.testRestTemplate.postForObject("http://localhost:" + port + "/faculties", faculty, Faculty.class))
                 .isNotNull()
@@ -48,35 +71,28 @@ public class FacultyControllerTest {
 
     @Test
     void editingFaculty() throws Exception {
-        Faculty faculty = new Faculty();
-        faculty.setName("Зелень");
-        faculty.setId(7L);
-        faculty.setColor("Зелёный");
-        this.testRestTemplate.put("http://localhost:" + port + "/faculties", faculty);
+        faculty1.setName("Зелень");
+        faculty1.setColor("Зелёный");
+        this.testRestTemplate.put("http://localhost:" + port + "/faculties", faculty1);
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/7", Faculty.class))
+                .assertThat(facultyRepository.findById(faculty1.getId().get()).get())
                 .isNotNull()
-                .isEqualTo(faculty);
+                .isEqualTo(faculty1);
     }
 
     @Test
     void deletingFacultyById() throws Exception {
-        Faculty faculty = new Faculty();
-        faculty.setName("Зелень");
-        faculty.setId(2L);
-        faculty.setColor("Зелёный");
-        this.testRestTemplate.delete("http://localhost:" + port + "/faculties/2");
+        this.testRestTemplate.delete("http://localhost:" + port + "/faculties/" + faculty1.getId().get());
         Assertions
-                .assertThat(this.testRestTemplate.exchange("http://localhost:" + port + "/faculties/2", HttpMethod.DELETE, null, Faculty.class))
-                .isEqualTo(faculty);
+                .assertThat(facultyRepository.findAll())
+                .hasSize(2)
+                .doesNotContain(faculty1);
     }
 
     @Test
     void filteringFacultiesByColor() throws Exception {
-        Faculty faculty1 = new Faculty(1L, "Синицы", "Синий");
-        Faculty faculty2 = new Faculty(4L, "Синяки", "Синий");
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/filteredByColor/Синий", Faculty[].class))
+                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/filteredByColor/" + faculty1.getColor(), Faculty[].class))
                 .isNotNull()
                 .contains(faculty1)
                 .contains(faculty2)
@@ -85,23 +101,32 @@ public class FacultyControllerTest {
 
     @Test
     void filteringByColorOrName() throws Exception {
-        Faculty faculty1 = new Faculty(3L, "Красавцы", "Красный");
-        Faculty faculty2 = new Faculty(1L, "Синицы", "Синий");
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/filteredByColorOrName?name=Синицы&color=Красный", Faculty[].class))
+                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/filteredByColorOrName?name=Синицы&color=Жёлтый", Faculty[].class))
                 .isNotNull()
                 .contains(faculty1)
-                .contains(faculty2)
+                .contains(faculty3)
                 .hasSize(2);
     }
 
     @Test
     void gettingStudentsFromFacultyByFacultyId() {
-        Student student = new Student(2L, "Иннокентий", 18);
+        Student student1 = new Student();
+        student1.setName("Иннокентий");
+        student1.setAge(24);
+        student1.setFaculty(faculty1);
+        studentRepository.save(student1);
+
+        Student student2 = new Student();
+        student2.setName("Вася");
+        student2.setAge(25);
+        student2.setFaculty(faculty1);
+        studentRepository.save(student2);
+
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/studentsFromFaculty/1", Student[].class))
+                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/faculties/studentsFromFaculty/" + faculty1.getId().get(), Student[].class))
                 .isNotNull()
-                .contains(student)
-                .hasSize(1);
+                .hasSize(2)
+                .contains(student1, student2);
     }
 }

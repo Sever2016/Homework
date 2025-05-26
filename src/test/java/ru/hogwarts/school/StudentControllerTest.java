@@ -1,15 +1,17 @@
 package ru.hogwarts.school;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpMethod;
 import ru.hogwarts.school.controller.StudentController;
 import ru.hogwarts.school.model.Faculty;
 import ru.hogwarts.school.model.Student;
+import ru.hogwarts.school.repository.FacultyRepository;
+import ru.hogwarts.school.repository.StudentRepository;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class StudentControllerTest {
@@ -23,17 +25,36 @@ public class StudentControllerTest {
     @Autowired
     private TestRestTemplate testRestTemplate;
 
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private FacultyRepository facultyRepository;
+
+    private Student student1 = new Student();
+    private Student student2 = new Student();
+    private Student student3 = new Student();
+
+    @BeforeEach
+    void clear() {
+        studentRepository.deleteAll();
+        student1.setName("Вика");
+        student1.setAge(22);
+        student2.setName("Дима");
+        student2.setAge(20);
+        student3.setName("Вася");
+        student3.setAge(22);
+        studentRepository.save(student1);
+        studentRepository.save(student2);
+        studentRepository.save(student3);
+    }
+
     @Test
     void gettingStudentById() throws Exception {
-        Student student = new Student();
-        student.setName("Вася");
-        student.setAge(20);
-        student.setId(3L);
-        student.setFaculty(null);
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/3", Student.class))
+                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/" + student1.getId().get(), Student.class))
                 .isNotNull()
-                .isEqualTo(student);
+                .isEqualTo(student1);
     }
 
     @Test
@@ -41,7 +62,6 @@ public class StudentControllerTest {
         Student student = new Student();
         student.setName("Вася");
         student.setAge(20);
-        student.setId(3L);
         Assertions
                 .assertThat(this.testRestTemplate.postForObject("http://localhost:" + port + "/students", student, Student.class))
                 .isNotNull()
@@ -50,59 +70,55 @@ public class StudentControllerTest {
 
     @Test
     void editingStudent() throws Exception {
-        Student student = new Student();
-        student.setName("Вася");
-        student.setAge(27);
-        student.setId(4L);
-        this.testRestTemplate.put("http://localhost:" + port + "/students", student);
+        student1.setAge(23);
+        student1.setName("Василий");
+        this.testRestTemplate.put("http://localhost:" + port + "/students", student1);
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/4", Student.class))
+                .assertThat(studentRepository.findById(student1.getId().get()).get())
                 .isNotNull()
-                .isEqualTo(student);
+                .isEqualTo(student1);
     }
 
     @Test
     void deletingStudentById() throws Exception {
-        Student student = new Student();
-        student.setName("Вася");
-        student.setId(4L);
-        student.setAge(27);
-        this.testRestTemplate.delete("http://localhost:" + port + "/student/4");
+        this.testRestTemplate.delete("http://localhost:" + port + "/students/" + student1.getId().get());
         Assertions
-                .assertThat(this.testRestTemplate.exchange("http://localhost:" + port + "/student/4", HttpMethod.DELETE, null, Student.class))
-                .isEqualTo(student);
+                .assertThat(studentRepository.findAll())
+                .hasSize(2)
+                .doesNotContain(student1);
     }
 
     @Test
     void filteringStudentsByAge() throws Exception {
-        Student student1 = new Student(8L, "Вика", 22);
-        Student student2 = new Student(9L, "Дима", 22);
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/filteredByAge/22", Student[].class))
+                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/filteredByAge/" + student1.getAge(), Student[].class))
                 .isNotNull()
                 .contains(student1)
-                .contains(student2)
+                .contains(student3)
                 .hasSize(2);
     }
 
     @Test
     void filteringByAgeBetween() throws Exception {
-        Student student1 = new Student(8L, "Вика", 22);
-        Student student2 = new Student(9L, "Дима", 22);
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/filteredByAgeBetween?minAge=20&maxAge=24", Student[].class))
+                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/filteredByAgeBetween?minAge=21&maxAge=25", Student[].class))
                 .isNotNull()
                 .contains(student1)
-                .contains(student2)
-                .hasSize(3);
+                .contains(student3)
+                .hasSize(2);
     }
 
     @Test
     void gettingFacultyByStudentId() {
-        Faculty faculty = new Faculty(6L, "Абрикосцы", "Жёлтый");
+        Faculty faculty = new Faculty();
+        faculty.setColor("Жёлтый");
+        faculty.setName("Абрикосцы");
+        student1.setFaculty(faculty);
 
+        facultyRepository.save(faculty);
+        studentRepository.save(student1);
         Assertions
-                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/studentFaculty/2", Faculty.class))
+                .assertThat(this.testRestTemplate.getForObject("http://localhost:" + port + "/students/studentFaculty/" + student1.getId().get(), Faculty.class))
                 .isNotNull()
                 .isEqualTo(faculty);
     }
