@@ -1,6 +1,7 @@
 package ru.hogwarts.school.service;
 
 import org.springframework.stereotype.Service;
+import ru.hogwarts.school.comparator.FacultySortComparator;
 import ru.hogwarts.school.model.Faculty;
 import ru.hogwarts.school.model.Student;
 import ru.hogwarts.school.repository.FacultyRepository;
@@ -47,6 +48,15 @@ public class FacultyService {
 
     public List<Student> getStudentsFromFaculty(Long facultyId) {
         return facultyRepository.findById(facultyId).get().getStudents();
+    }
+
+    public String getLongestFacultyName() {
+        return facultyRepository.findAll()
+                .stream()
+                .map(i -> i.getName())
+                .sorted(new FacultySortComparator())
+                .findFirst()
+                .get();
     }
 
 }
