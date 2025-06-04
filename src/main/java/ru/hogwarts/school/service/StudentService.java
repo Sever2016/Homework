@@ -89,4 +89,62 @@ public class StudentService {
                 .getAsDouble();
     }
 
+    public void printParallel() {
+        StudentService studentService = new StudentService(studentRepository);
+
+        Thread thread_1 = new Thread (() -> {
+            studentService.printParallelStudent(0);
+            studentService.printParallelStudent(1);
+        });
+
+        Thread thread_2 = new Thread (() -> {
+            studentService.printParallelStudent(2);
+            studentService.printParallelStudent(3);
+        });
+
+        Thread thread_3 = new Thread (() -> {
+            studentService.printParallelStudent(4);
+            studentService.printParallelStudent(5);
+        });
+
+        thread_1.start();
+        thread_2.start();
+        thread_3.start();
+    }
+
+    public void printParallelStudent(int index) {
+        System.out.println("Студент " + (1 + index) + ": " + studentRepository.findAll().get(index).getName());
+    }
+
+    public void printSynchronized() {
+        StudentService studentService = new StudentService(studentRepository);
+
+        Thread thread_1 = new Thread (() -> {
+            studentService.printSynchronizedStudent();
+            studentService.printSynchronizedStudent();
+        });
+
+        Thread thread_2 = new Thread (() -> {
+            studentService.printSynchronizedStudent();
+            studentService.printSynchronizedStudent();
+        });
+
+        Thread thread_3 = new Thread (() -> {
+            studentService.printSynchronizedStudent();
+            studentService.printSynchronizedStudent();
+        });
+
+        thread_1.start();
+        thread_2.start();
+        thread_3.start();
+    }
+
+    int index = -1;
+
+    public void printSynchronizedStudent() {
+        synchronized (StudentService.class) {
+            index++;
+            System.out.println("Студент " + (1 + index) + ": " + studentRepository.findAll().get(index).getName());
+        }
+    }
 }

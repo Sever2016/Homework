@@ -79,4 +79,14 @@ public class StudentController {
     public ResponseEntity<Double> getAverageAgeOfStudentsByStreamAPI() {
         return ResponseEntity.ok(studentService.getAverageAgeOfStudentByStreamAPI());
     }
+
+    @GetMapping("/print-parallel")
+    public void printParallel() {
+        studentService.printParallel();
+    }
+
+    @GetMapping("/print-synchronized")
+    public void printSynchronized() {
+        studentService.printSynchronized();
+    }
 }
